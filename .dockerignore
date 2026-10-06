@@ -1,0 +1,26 @@
+# Version control
+.git
+.gitignore
+
+# Virtualenvs / caches (rebuilt inside the image)
+.venv
+__pycache__
+*.py[cod]
+.pytest_cache
+.ruff_cache
+.mypy_cache
+.agent_tmp
+
+# Coverage artifacts
+.coverage
+.coverage.*
+coverage.xml
+htmlcov
+
+# Local env
+.env
+
+# Docker/compose files themselves
+Dockerfile
+.dockerignore
+compose.yaml
