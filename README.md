@@ -121,6 +121,33 @@ results are reproducible in tests and demos.
 | `source`              | `enum` (`live`/`mock`)  | Whether evidence was live or synthesized        |
 | `signals`             | `array[string]`         | Human-readable evidence trail behind the score  |
 
+## Docker
+
+Containerization is the default way to run this service.
+
+```bash
+# Build and run with Compose (recommended)
+docker compose up --build
+
+# ...or plain Docker
+docker build -t lead-enricher .
+docker run --rm -p 8000:8000 lead-enricher
+```
+
+Then hit it the same way as before:
+
+```bash
+curl -s -X POST http://127.0.0.1:8000/enrich \
+  -H 'Content-Type: application/json' \
+  -d '{"domain": "stripe.com"}' | python -m json.tool
+```
+
+The image is multi-stage: a `uv`-based builder resolves dependencies from
+`uv.lock`, and the runtime stage ships only the virtualenv on
+`python:3.13-slim-bookworm`. It runs as a non-root user (`uid 10001`), exposes
+`8000`, and includes a `HEALTHCHECK` against `/healthz`. The Compose service
+adds a read-only root filesystem, `no-new-privileges`, and a tmpfs `/tmp`.
+
 ## Development
 
 ```bash
@@ -153,6 +180,8 @@ src/lead_enricher/
   domain.py    # input normalization and validation
   models.py    # Pydantic v2 contracts
 tests/         # pytest suite
+Dockerfile     # multi-stage container build
+compose.yaml   # hardened local run
 ```
 
 ## License
