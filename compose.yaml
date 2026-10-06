@@ -1,0 +1,28 @@
+services:
+  api:
+    build:
+      context: .
+      target: runtime
+    image: data-biz-ai-consultancy/lead-enricher:latest
+    ports:
+      - "8000:8000"
+    environment:
+      HOST: "0.0.0.0"
+      PORT: "8000"
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8000/healthz', timeout=2).status == 200 else 1)"
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 5s
+    # Hardening: immutable rootfs, no privilege escalation, scratch space in tmpfs.
+    read_only: true
+    security_opt:
+      - no-new-privileges:true
+    tmpfs:
+      - /tmp
+    restart: unless-stopped

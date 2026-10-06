@@ -1,0 +1,65 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+permissions:
+  contents: read
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v1
+        with:
+          enable-cache: true
+          version: "latest"
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install dependencies
+        run: uv sync --all-extras
+
+      - name: Run tests with coverage
+        run: uv run pytest --cov=lead_enricher --cov-report=term-missing
+
+  docker:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build image
+        run: docker build -t lead-enricher:ci .
+
+      - name: Start service
+        run: |
+          docker run -d --name lead-enricher-ci -p 8000:8000 lead-enricher:ci
+
+      - name: Wait for health and smoke-test /enrich
+        run: |
+          for i in $(seq 1 30); do
+            if curl -sf http://127.0.0.1:8000/healthz >/dev/null; then
+              echo "service healthy"; break
+            fi
+            sleep 2
+          done
+          curl -sf http://127.0.0.1:8000/healthz
+          curl -sf "http://127.0.0.1:8000/enrich?domain=example.com" | tee /tmp/enrich.json
+          python -c "import json; d=json.load(open('/tmp/enrich.json')); assert d['domain']=='example.com'; print('smoke test OK')"
+
+      - name: Container logs
+        if: always()
+        run: docker logs lead-enricher-ci
+
+      - name: Tear down
+        if: always()
+        run: docker rm -f lead-enricher-ci
